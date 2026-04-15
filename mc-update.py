@@ -19,7 +19,7 @@ def print_help():
     print(f"""A Minecraft Auto-Updater Wrapper Script for PrismLauncher Instances
 
 Usage (in PrismLauncher → Right Click Instance → Edit → Settings → Custom Commands → Wrapper Command):
-    \"{__file__}\" [options]
+    "{__file__}" [options]
 
 Options:
     --release            Use the latest release version (default)
@@ -40,19 +40,19 @@ Options:
     --help               Show this help message
 
 Example (most basic but should work):
-    \"{__file__}\"
+    "{__file__}"
 
 Example with prism_path and snapshot:
-    \"{__file__}\" --prism_path \"/usr/bin/prismlauncher\" --snapshot
+    "{__file__}" --prism_path "/usr/bin/prismlauncher" --snapshot
 
 Example with optirun and release specified:
-    \"{__file__}\" --release --end_up_wrapper optirun
+    "{__file__}" --release --end_up_wrapper optirun
 
 """)
     sys.exit(0)
 
 def split_wrapper_and_game_args(argv):
-    java_names = [
+    java_names =[
         "java", "java.exe",
         "javaw", "javaw.exe",
         "openjdk", "openjdk.exe",
@@ -72,7 +72,7 @@ def split_wrapper_and_game_args(argv):
             arg = Path(argv[i])
             if arg.name.lower() in java_names:
                 return argv[1:i], argv[i:]
-        return argv[1:], []  # fallback if no Java found
+        return argv[1:],[]  # fallback if no Java found
 
 def parse_args():
     if "--help" in sys.argv:
@@ -83,7 +83,7 @@ def parse_args():
     use_release = "--snapshot" not in wrapper_args or "--release" in wrapper_args
 
     # Known Prism/MultiMC launcher executables (Linux, Windows, macOS)
-    prism_names = [
+    prism_names =[
         "prismlauncher",              # Linux / macOS CLI
         "prism-launcher",
         "prismlauncher.exe",          # Windows
@@ -93,6 +93,8 @@ def parse_args():
         "multimc",                    # lowercase variants
         "multimc.exe"
     ]
+
+    prism_path = None
 
     # If --prism_path is provided, try to resolve it first
     if "--prism_path" in wrapper_args:
@@ -108,26 +110,26 @@ def parse_args():
 
         # Try full path first
         if Path(given_path).is_file() and os.access(given_path, os.X_OK):
-            return Path(given_path).resolve()
+            prism_path = Path(given_path).resolve()
         else:
-            resolved = Path(shutil.which(given_path)).resolve()
-            if resolved:
-                return resolved
+            which_given = shutil.which(given_path)
+            if which_given:
+                prism_path = Path(which_given).resolve()
             else:
                 print(f"The given path '{given_path}' could not be resolved.")
                 sys.exit(1)
-
-    # Otherwise, search known names in PATH
-    for name in prism_names:
-        resolved = Path(shutil.which(name)).resolve()
-        if resolved:
-            prism_path = resolved
-            break
+    else:
+        # Otherwise, search known names in PATH
+        for name in prism_names:
+            which_path = shutil.which(name)
+            if which_path:
+                prism_path = Path(which_path).resolve()
+                break
 
     if not prism_path:
         print("App prismlauncher / multimc could not be found.")
         print("The argument --prism_path will need to be set to the full path of prismlauncher / multimc.")
-        print("Eg. '\"{__file__}\" --prism_path \"/usr/bin/prismlauncher\" --snapshot'.")
+        print(f"Eg. '\"{__file__}\" --prism_path \"/usr/bin/prismlauncher\" --snapshot'.")
         sys.exit(1)
 
     working_dir = Path(os.getcwd())
@@ -187,7 +189,7 @@ def save_mmc_config(path, data):
         json.dump(data, f, indent=4, sort_keys=True)
 
 def get_mc_component(mmc_json):
-    return next((c for c in mmc_json.get("components", []) if c.get("uid") == "net.minecraft"), None)
+    return next((c for c in mmc_json.get("components",[]) if c.get("uid") == "net.minecraft"), None)
 
 def needs_update(instance_path, mcc_config, use_release):
     config_path = Path(instance_path, mcc_config)
@@ -220,7 +222,7 @@ ENABLE_LOG = {subprocess_log}
 LOG_PATH = {repr(str(config_path.parent / "wrapper_subprocess.log"))}
 CONFIG_PATH = {repr(str(config_path))}
 NEW_VERSION = {repr(new_version)}
-PRISM_CMD = { [str(prism_path), "--launch", instance_id]!r }
+PRISM_CMD = {[str(prism_path), "--launch", instance_id]!r }
 TIMEOUT = {timeout}
 
 if ENABLE_LOG and os.path.isfile(LOG_PATH):
@@ -265,7 +267,7 @@ try:
     log('Rewriting version in config...')
     with open(CONFIG_PATH, 'r+') as f:
         data = json.load(f)
-        for comp in data.get("components", []):
+        for comp in data.get("components",[]):
             if comp.get("uid") == "net.minecraft":
                 comp["version"] = NEW_VERSION
                 break
