@@ -48,7 +48,7 @@ Example with prism_path and snapshot:
 Example with optirun and release specified:
     \"{__file__}\" --release --end_up_wrapper optirun
 
-""")
+"""
     sys.exit(0)
 
 def split_wrapper_and_game_args(argv):
@@ -108,27 +108,28 @@ def parse_args():
 
         # Try full path first
         if Path(given_path).is_file() and os.access(given_path, os.X_OK):
-            return Path(given_path).resolve()
+            prism_path = Path(given_path).resolve()
         else:
-            resolved = Path(shutil.which(given_path)).resolve()
-            if resolved:
-                return resolved
+            which_result = shutil.which(given_path)
+            if which_result:
+                prism_path = Path(which_result).resolve()
             else:
                 print(f"The given path '{given_path}' could not be resolved.")
                 sys.exit(1)
+    else:
+        # Otherwise, search known names in PATH
+        prism_path = None
+        for name in prism_names:
+            which_result = shutil.which(name)
+            if which_result:
+                prism_path = Path(which_result).resolve()
+                break
 
-    # Otherwise, search known names in PATH
-    for name in prism_names:
-        resolved = Path(shutil.which(name)).resolve()
-        if resolved:
-            prism_path = resolved
-            break
-
-    if not prism_path:
-        print("App prismlauncher / multimc could not be found.")
-        print("The argument --prism_path will need to be set to the full path of prismlauncher / multimc.")
-        print("Eg. '\"{__file__}\" --prism_path \"/usr/bin/prismlauncher\" --snapshot'.")
-        sys.exit(1)
+        if not prism_path:
+            print("App prismlauncher / multimc could not be found.")
+            print("The argument --prism_path will need to be set to the full path of prismlauncher / multimc.")
+            print("Eg. '\"{__file__}\" --prism_path \"/usr/bin/prismlauncher\" --snapshot'.")
+            sys.exit(1)
 
     working_dir = Path(os.getcwd())
 
@@ -171,6 +172,7 @@ def download_version_manifest(url, retries):
                 print(f"\nInternet missing. Retrying {retries + 1} more times...")
             time.sleep(1)
 
+
 def load_mmc_config(path):
     if not path.is_file():
         print(f"Missing config: {str(path)}")
@@ -182,9 +184,11 @@ def load_mmc_config(path):
             print("Invalid JSON in mmc-pack.json.")
             sys.exit(1)
 
+
 def save_mmc_config(path, data):
     with open(path, "w") as f:
         json.dump(data, f, indent=4, sort_keys=True)
+
 
 def get_mc_component(mmc_json):
     return next((c for c in mmc_json.get("components", []) if c.get("uid") == "net.minecraft"), None)
@@ -291,19 +295,18 @@ log('Done.')
     python_exe = sys.executable  # current Python interpreter
 
     # Fully detached, silent subprocess
-    subprocess.Popen(
-        [python_exe, "-c", launch_script],
+    subprocess.Popen([
+        python_exe, "-c", launch_script,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         stdin=subprocess.DEVNULL,
         start_new_session=True  # Important: prevents signal propagation
-    )
+    ])
 
     time.sleep(0.1)
 
     print()
     sys.exit(0)
-
 
 def main():
     print()
